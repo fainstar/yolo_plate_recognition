@@ -1,10 +1,16 @@
 # 車牌辨識系統
 
 ## 專案簡介
-本專案是一個基於 YOLOv8 模型的車牌辨識系統，提供 Web 介面和 API 服務。系統整合了車牌偵測和 OCR 文字辨識功能，支援 GPU 加速並自動回退到 CPU 運算。系統使用 base64 進行圖片傳輸，確保資料傳輸的安全性和效率。
+本專案是一個基於 YOLOv8 模型的車牌辨識系統，提供 Web 介面和 API 服務。系統整合了車牌偵測和 PaddleOCR 文字辨識功能，支援 GPU 加速並自動回退到 CPU 運算。系統使用 base64 進行圖片傳輸，確保資料傳輸的安全性和效率。
 
-## 專案結構
+## 系統需求
+- Python 3.10 或以上
+- CUDA 11.6（用於 GPU 加速，可選）
+- NVIDIA 顯示卡驅動程式（用於 GPU 加速，可選）
+
+## 工作目錄結構
 ```
+.
 ├── main.py                 # 主程式入口
 ├── config/                 # 配置管理
 │   ├── __init__.py
@@ -18,127 +24,172 @@
 ├── utils/                 # 工具類
 │   ├── __init__.py
 │   └── image_processor.py # 圖片處理工具
-├── Base/                  # 基礎配置
-│   └── environment.txt    # 環境依賴
-├── Data/                  # 測試資料
+├── templates/             # 網頁模板
+│   └── index.html        # Web 介面
+├── Test/                 # 測試目錄
+│   ├── test_api.py       # API 測試
+│   ├── test_base.py      # 基礎功能測試
+│   └── test_plate_recognition.py # 車牌辨識測試
+├── Data/                 # 測試資料
 │   ├── base_01.png
+│   ├── data02.jpg
 │   └── data03.jpeg
-├── OutPut/               # 輸出目錄
-│   └── result.jpg
-├── templates/            # 網頁模板
-│   └── index.html
-└── Test/                 # 測試目錄
-    ├── test_api.py
-    └── test_base.py
+└── OutPut/              # 輸出結果
+    ├── result.jpg
+    └── plates/          # 裁剪的車牌圖片
 ```
 
-## 功能特點
-- Web 介面支援拖放上傳圖片
-- RESTful API 支援 base64 圖片傳輸
-- GPU 加速支援（自動回退到 CPU）
-- 即時車牌偵測和標記
-- OCR 車牌文字辨識
-- 支援批次處理
-- 完整的錯誤處理機制
-- 模組化設計，易於擴展
+## 特色功能
+1. **智慧圖像處理**
+   - 自適應圖像增強
+   - 智能去噪和銳化
+   - 多階段預處理優化
+   - 自動亮度和對比度調整
 
-## 系統需求
-- Python 3.10 或以上
-- CUDA 11.6（用於 GPU 加速，可選）
-- onnxruntime-gpu 1.15.1
-- Tesseract OCR 5.0.0 或以上
+2. **高效能辨識引擎**
+   - YOLOv8 車牌檢測
+   - PaddleOCR 文字識別
+   - GPU 加速支援
+   - 批次處理能力
 
-## 安裝步驟
+3. **友善使用介面**
+   - 直覺式網頁界面
+   - 即時視覺化結果
+   - 拖放式圖片上傳
+   - 詳細辨識資訊顯示
 
-### 1. 安裝 Tesseract OCR
-1. 下載 Tesseract OCR 安裝程式：
-   - 前往 https://github.com/UB-Mannheim/tesseract/wiki
-   - 下載 Windows 64-bit 版本
-   - 例如：tesseract-ocr-w64-setup-v5.3.1.20230401.exe
+## API 服務說明
 
-2. 執行安裝：
-   - 建議路徑：`C:\Program Files\Tesseract-OCR`
-   - 勾選「Additional language data」
-   - 將安裝路徑加入系統環境變數 PATH
+### 1. 車牌檢測（/infer）
+**請求方式：** POST
+```json
+{
+    "image": "base64_encoded_image_string"
+}
+```
+**回應：**
+```json
+{
+    "success": true,
+    "image": "base64_encoded_result_image"
+}
+```
 
-3. 驗證安裝：
-   ```bash
-   tesseract --version
-   ```
+### 2. 車牌裁剪與辨識（/infer/crops）
+**請求方式：** POST
+```json
+{
+    "image": "base64_encoded_image_string"
+}
+```
+**回應：**
+```json
+{
+    "success": true,
+    "detections": [
+        {
+            "id": 0,
+            "image": "base64_encoded_crop",
+            "plate_number": "ABC-1234"
+        }
+    ]
+}
+```
 
-### 2. 安裝 Python 套件
+### 3. OCR 辨識（/infer/ocr）
+**請求方式：** POST
+```json
+{
+    "image": "base64_encoded_plate_image"
+}
+```
+**回應：**
+```json
+{
+    "success": true,
+    "plate_number": "ABC-1234"
+}
+```
+
+## 安裝配置
+
+### 1. 環境準備
 ```bash
-pip install -r Base/environment.txt
+# 建立虛擬環境
+python -m venv .venv
+
+# 啟動虛擬環境
+.venv\Scripts\activate
+
+# 安裝依賴套件
+pip install -r requirements.txt
 ```
 
-## API 端點
+### 2. 系統配置
+在 `config.py` 中可調整的關鍵參數：
 
-### 1. 車牌偵測與標記
-- 端點：`/infer`
-- 方法：POST
-- 功能：偵測車牌位置並在原圖上標記
-- 回應：標記後的完整圖片
-
-### 2. 車牌裁剪與辨識
-- 端點：`/infer/crops`
-- 方法：POST
-- 功能：偵測車牌、裁剪並進行 OCR 辨識
-- 回應：裁剪的車牌圖片和辨識文字
-
-### 3. 單一車牌 OCR
-- 端點：`/infer/ocr`
-- 方法：POST
-- 功能：對單一車牌圖片進行 OCR 辨識
-- 回應：辨識出的車牌號碼
-
-## 配置說明
-
-### OCR 配置
 ```python
-TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-TESSERACT_LANG = "eng"
-TESSERACT_CHAR_WHITELIST = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
+# PaddleOCR 配置
+PADDLE_USE_GPU = True          # 是否使用 GPU
+PADDLE_LANG = "en"             # 識別語言
+PADDLE_MIN_SCORE = 0.3         # 檢測閾值
+PADDLE_BOX_THRESH = 0.3        # 框選閾值
+
+# 圖像處理配置
+IMAGE_RESIZE_FACTOR = 3.0      # 放大倍數
+CONTRAST_ALPHA = 1.5           # 對比度調整
+CONTRAST_BETA = 10             # 亮度調整
+DENOISE_H = 10                 # 去噪強度
 ```
 
-### 圖像預處理配置
-```python
-PREPROCESSING_THRESHOLD = 128
-PREPROCESSING_GAUSSIAN_KERNEL = (5, 5)
-PREPROCESSING_GAUSSIAN_SIGMA = 0
-```
+## 性能優化建議
 
-## 效能優化
-- 單例模式管理模型載入
-- GPU 加速支援
-- 圖像預處理優化
-- 批次處理支援
+### 1. 低解析度圖片處理
+- 調高 `IMAGE_RESIZE_FACTOR` 值
+- 降低 `DENOISE_H` 以保留更多細節
+- 適當調整 `CONTRAST_ALPHA` 和 `CONTRAST_BETA`
 
-## 未來規劃
-- [ ] 支援多國語言車牌
-- [ ] 整合資料庫儲存辨識結果
-- [ ] 提供批次處理 API
-- [ ] 添加即時視訊處理支援
+### 2. GPU 加速優化
+- 確保 CUDA 版本相容
+- 預先載入模型到 GPU 記憶體
+- 批次處理時善用 GPU 並行運算
 
-## 貢獻指南
-1. Fork 專案
-2. 創建功能分支
-3. 提交更改
-4. 發起合併請求
+### 3. API 效能優化
+- 使用異步處理大量請求
+- 實作請求佇列管理
+- 做好錯誤處理和重試機制
 
-## 問題回報
-如遇到問題，請在 Issues 區提供：
-- 問題描述
-- 重現步驟
-- 期望結果
-- 系統環境資訊
+## 故障排除
 
-## 授權協議
-MIT License
+### 常見問題解決方案
 
-## 更新日誌
+1. **圖片無法正確讀取**
+   - 檢查圖片格式是否支援
+   - 確認 base64 編碼是否完整
+   - 檢查圖片檔案權限
+
+2. **GPU 相關問題**
+   - 確認 CUDA 驅動程式版本
+   - 檢查 GPU 記憶體使用狀況
+   - 確認 CUDA_VISIBLE_DEVICES 設置
+
+3. **辨識準確度問題**
+   - 調整預處理參數
+   - 檢查圖片品質
+   - 優化 OCR 配置
+
+## 開發團隊
+若有任何問題或建議，請聯絡：
+- Email：[您的信箱]
+- GitHub：[您的 GitHub]
+
+## 版本歷程
+
 ### 2025/05/01
-- 重構專案結構
-- 新增 OCR 辨識功能
-- 優化預處理流程
-- 改進錯誤處理機制
-- 更新文件
+- 更新 PaddleOCR 配置
+- 優化圖像處理流程
+- 改進低解析度圖片處理
+- 完善文件說明
+
+## 授權說明
+本專案採用 MIT 授權條款。詳見 LICENSE 文件。

@@ -10,24 +10,31 @@ class AppConfig:
     PORT: int = 5000
     DEBUG: bool = True
     
-    # Tesseract 配置
-    TESSERACT_CMD: str = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-    TESSERACT_LANG: str = "eng"
-    # 限制只能辨識英文字母、數字和破折號
-    TESSERACT_CHAR_WHITELIST: str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
+    # PaddleOCR 配置
+    PADDLE_USE_GPU: bool = True
+    PADDLE_LANG: str = "en"  # 使用英文識別
+    PADDLE_USE_ANGLE_CLS: bool = True  # 使用文字方向分類
+    PADDLE_MIN_SCORE: float = 0.3  # 降低文字檢測的信心度閾值
+    PADDLE_BOX_THRESH: float = 0.3  # 降低檢測框的信心度閾值
+    PADDLE_UNCLIP_RATIO: float = 2.0  # 擴大檢測框範圍
     
     # 圖像預處理配置
     PREPROCESSING_THRESHOLD: int = 128  # 二值化閾值
-    PREPROCESSING_GAUSSIAN_KERNEL: tuple = (5, 5)  # 高斯模糊核大小
-    PREPROCESSING_GAUSSIAN_SIGMA: int = 0  # 高斯模糊標準差
+    PREPROCESSING_GAUSSIAN_KERNEL: tuple = (3, 3)  # 降低高斯模糊核大小以保留更多細節
+    PREPROCESSING_GAUSSIAN_SIGMA: int = 1  # 適度的高斯模糊
+    
+    # 圖像增強配置
+    IMAGE_RESIZE_FACTOR: float = 3.0  # 放大倍數
+    CONTRAST_ALPHA: float = 1.5  # 對比度增強係數
+    CONTRAST_BETA: int = 10  # 亮度調整值
+    SHARPEN_KERNEL: tuple = (3, 3)  # 銳化核大小
+    SHARPEN_SIGMA: float = 1.0  # 銳化強度
+    DENOISE_H: int = 10  # 去噪強度
+    DENOISE_TEMPLATE_WINDOW: int = 7  # 去噪模板窗口大小
+    DENOISE_SEARCH_WINDOW: int = 21  # 去噪搜索窗口大小
 
     def __post_init__(self):
         if self.PREFERRED_PROVIDERS is None:
             self.PREFERRED_PROVIDERS = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-            
-    @property
-    def TESSERACT_CONFIG(self) -> str:
-        """取得 Tesseract 配置字串"""
-        return f"-c tessedit_char_whitelist={self.TESSERACT_CHAR_WHITELIST} --psm 7"
 
 config = AppConfig()
