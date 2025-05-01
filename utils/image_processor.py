@@ -85,7 +85,21 @@ class ImageProcessor:
     @staticmethod
     def crop_detection(image: np.ndarray, detection) -> np.ndarray:
         """裁剪檢測框區域"""
-        x1, y1, x2, y2 = map(int, detection.xyxy[0])
+        # 確保我們使用正確的座標格式
+        if isinstance(detection.xyxy, np.ndarray):
+            xyxy = detection.xyxy[0]  # 使用第一組座標
+        else:
+            xyxy = detection.xyxy  # 如果已經是單一座標
+            
+        x1, y1, x2, y2 = map(int, xyxy)
+        
+        # 確保座標在圖片範圍內
+        height, width = image.shape[:2]
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(width, x2)
+        y2 = min(height, y2)
+        
         return image[y1:y2, x1:x2]
 
     @staticmethod

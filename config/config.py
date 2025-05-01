@@ -26,10 +26,10 @@ class AppConfig:
     # 圖像增強配置
     IMAGE_RESIZE_FACTOR: float = 3.0  # 放大倍數
     CONTRAST_ALPHA: float = 1.5  # 對比度增強係數
-    CONTRAST_BETA: int = 10  # 亮度調整值
+    CONTRAST_BETA: int = 8  # 亮度調整值
     SHARPEN_KERNEL: tuple = (3, 3)  # 銳化核大小
     SHARPEN_SIGMA: float = 1.0  # 銳化強度
-    DENOISE_H: int = 10  # 去噪強度
+    DENOISE_H: int = 8  # 去噪強度
     DENOISE_TEMPLATE_WINDOW: int = 7  # 去噪模板窗口大小
     DENOISE_SEARCH_WINDOW: int = 21  # 去噪搜索窗口大小
 

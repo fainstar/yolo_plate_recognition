@@ -30,6 +30,11 @@ def index():
     """首頁路由"""
     return render_template('index.html')
 
+@app.route('/process')
+def process():
+    """處理流程頁面路由"""
+    return render_template('process.html')
+
 @app.route('/infer', methods=['POST'])
 def infer():
     """推論 API 路由"""

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>處理流程 - 車牌辨識系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        .step-image {
+            transition: transform 0.3s ease;
+        }
+        .step-image:hover {
+            transform: scale(1.05);
+        }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+    <nav class="bg-gray-800 border-b border-gray-700 fixed top-0 left-0 right-0 z-50">
+        <div class="max-w-screen-xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex items-center">
+                        <span class="text-xl font-bold text-white">車牌辨識系統</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <a href="/" class="px-3 py-2 rounded-md text-sm font-bold text-gray-300 hover:text-white">首頁</a>
+                    <a href="/process" class="px-3 py-2 rounded-md text-sm font-bold text-blue-400 hover:text-blue-300">處理流程</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 pt-20 pb-8 max-w-4xl">
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold text-white mb-6">處理流程</h1>
+            <div id="processFlow" class="space-y-8">
+                <div class="process-step bg-gray-700 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center">
+                        <span class="bg-blue-900 text-blue-300 rounded-full w-8 h-8 flex items-center justify-center mr-2">1</span>
+                        原始圖片輸入
+                    </h3>
+                    <div class="step-images flex flex-wrap gap-4">
+                        <img id="step1Image" class="step-image rounded-lg shadow-md max-w-md">
+                    </div>
+                    <p class="text-gray-300 mt-3 text-sm font-bold">使用者上傳的原始圖片</p>
+                </div>
+
+                <div class="process-step bg-gray-700 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center">
+                        <span class="bg-blue-900 text-blue-300 rounded-full w-8 h-8 flex items-center justify-center mr-2">2</span>
+                        車牌偵測與框選
+                    </h3>
+                    <div class="step-images flex flex-wrap gap-4">
+                        <img id="step2Image" class="step-image rounded-lg shadow-md max-w-md">
+                    </div>
+                    <p class="text-gray-300 mt-3 text-sm font-bold">使用 YOLO 模型偵測並框選車牌位置</p>
+                </div>
+
+                <div class="process-step bg-gray-700 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center">
+                        <span class="bg-blue-900 text-blue-300 rounded-full w-8 h-8 flex items-center justify-center mr-2">3</span>
+                        車牌裁切
+                    </h3>
+                    <div id="step3Images" class="step-images grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    </div>
+                    <p class="text-gray-300 mt-3 text-sm font-bold">裁切出單獨的車牌區域</p>
+                </div>
+
+                <div class="process-step bg-gray-700 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center">
+                        <span class="bg-blue-900 text-blue-300 rounded-full w-8 h-8 flex items-center justify-center mr-2">4</span>
+                        圖片預處理
+                    </h3>
+                    <div id="step4Images" class="step-images grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    </div>
+                    <p class="text-gray-300 mt-3 text-sm font-bold">包含灰階化、二值化等預處理步驟</p>
+                </div>
+
+                <div class="process-step bg-gray-700 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-blue-400 mb-4 flex items-center">
+                        <span class="bg-blue-900 text-blue-300 rounded-full w-8 h-8 flex items-center justify-center mr-2">5</span>
+                        最終辨識結果
+                    </h3>
+                    <div id="step5Images" class="step-images grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    </div>
+                    <p class="text-gray-300 mt-3 text-sm font-bold">顯示最終辨識出的車牌號碼</p>
+                </div>
+            </div>
+
+            <div id="noData" class="hidden">
+                <div class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h2 class="mt-4 text-lg font-bold text-gray-300">尚未有處理資料</h2>
+                    <p class="mt-2 text-sm text-gray-400 font-bold">請先回到首頁上傳圖片進行處理</p>
+                    <div class="mt-6">
+                        <a href="/" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-bold rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            返回首頁
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
+    <script>
+        const processData = JSON.parse(sessionStorage.getItem('processData'));
+        const processFlow = document.getElementById('processFlow');
+        const noData = document.getElementById('noData');
+        
+        if (processData) {
+            processFlow.style.display = 'block';
+            noData.style.display = 'none';
+            
+            // 步驟 1: 顯示原始圖片
+            document.getElementById('step1Image').src = processData.original;
+
+            // 步驟 2: 顯示偵測結果
+            document.getElementById('step2Image').src = processData.result;
+
+            // 步驟 3-5: 顯示每個車牌的處理過程
+            const step3Container = document.getElementById('step3Images');
+            const step4Container = document.getElementById('step4Images');
+            const step5Container = document.getElementById('step5Images');
+            
+            step3Container.innerHTML = '';
+            step4Container.innerHTML = '';
+            step5Container.innerHTML = '';
+
+            processData.detections.forEach((detection, index) => {
+                // 步驟 3: 裁切後的車牌
+                const plateImg = document.createElement('img');
+                plateImg.src = 'data:image/jpeg;base64,' + detection.processing_images.plate;
+                plateImg.className = 'step-image rounded-lg shadow-md w-full';
+                step3Container.appendChild(plateImg);
+
+                // 步驟 4: 預處理過程
+                const grayImg = document.createElement('img');
+                grayImg.src = 'data:image/jpeg;base64,' + detection.processing_images.gray;
+                grayImg.className = 'step-image rounded-lg shadow-md w-full';
+                
+                const binaryImg = document.createElement('img');
+                binaryImg.src = 'data:image/jpeg;base64,' + detection.processing_images.binary;
+                binaryImg.className = 'step-image rounded-lg shadow-md w-full';
+                
+                step4Container.appendChild(grayImg);
+                step4Container.appendChild(binaryImg);
+
+                // 步驟 5: 最終結果
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'bg-white rounded-lg shadow-md p-4';
+                
+                const finalImg = document.createElement('img');
+                finalImg.src = 'data:image/jpeg;base64,' + detection.processing_images.plate;
+                finalImg.className = 'w-full rounded-lg mb-3';
+                
+                const resultText = document.createElement('div');
+                resultText.className = 'text-blue-600 font-bold text-lg bg-blue-50 rounded-md p-2 text-center';
+                resultText.textContent = detection.plate_number;
+                
+                resultDiv.appendChild(finalImg);
+                resultDiv.appendChild(resultText);
+                step5Container.appendChild(resultDiv);
+            });
+        } else {
+            processFlow.style.display = 'none';
+            noData.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
