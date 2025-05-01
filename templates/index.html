@@ -51,6 +51,22 @@
         button:hover {
             background-color: #45a049;
         }
+        .crops-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .crop-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .crop-image {
+            max-width: 200px;
+            max-height: 100px;
+        }
     </style>
 </head>
 <body>
@@ -68,6 +84,8 @@
             <img id="originalImage" class="preview">
             <h2>標記結果：</h2>
             <img id="resultImage" class="preview">
+            <h2>車牌圖片：</h2>
+            <div id="cropsContainer" class="crops-container"></div>
         </div>
     </div>
 
@@ -111,6 +129,7 @@
                 originalImage.src = e.target.result;
                 const base64Image = e.target.result.split(',')[1];
                 sendToAPI(base64Image);
+                sendToCropsAPI(base64Image);
             };
             reader.readAsDataURL(file);
         }
@@ -140,6 +159,55 @@
             } finally {
                 loading.style.display = 'none';
             }
+        }
+
+        // 發送到裁剪 API
+        async function sendToCropsAPI(base64Image) {
+            loading.style.display = 'block';
+            try {
+                const response = await fetch('http://localhost:5000/infer/crops', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: base64Image
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    displayCrops(data.detections);
+                } else {
+                    alert('處理失敗：' + data.error);
+                }
+            } catch (error) {
+                alert('發生錯誤：' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // 顯示裁剪的車牌圖片
+        function displayCrops(detections) {
+            const container = document.getElementById('cropsContainer');
+            container.innerHTML = '';
+            
+            detections.forEach(detection => {
+                const div = document.createElement('div');
+                div.className = 'crop-item';
+                
+                const img = document.createElement('img');
+                img.src = 'data:image/jpeg;base64,' + detection.image;
+                img.className = 'crop-image';
+                
+                const label = document.createElement('p');
+                label.textContent = `車牌 #${detection.id + 1}`;
+                
+                div.appendChild(img);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
         }
     </script>
 </body>
