@@ -62,10 +62,35 @@
             padding: 10px;
             border-radius: 4px;
             text-align: center;
+            background-color: #fff;
+            transition: transform 0.2s;
         }
-        .crop-image {
-            max-width: 200px;
-            max-height: 100px;
+        .crop-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .plate-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2196F3;
+            margin: 8px 0;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .confidence {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .total-count {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 16px;
+            color: #1976d2;
         }
     </style>
 </head>
@@ -84,7 +109,8 @@
             <img id="originalImage" class="preview">
             <h2>標記結果：</h2>
             <img id="resultImage" class="preview">
-            <h2>車牌圖片：</h2>
+            <h2>辨識結果：</h2>
+            <div class="total-count" id="totalCount"></div>
             <div id="cropsContainer" class="crops-container"></div>
         </div>
     </div>
@@ -188,10 +214,13 @@
             }
         }
 
-        // 顯示裁剪的車牌圖片
+        // 更新顯示裁剪的車牌圖片和辨識結果
         function displayCrops(detections) {
             const container = document.getElementById('cropsContainer');
+            const totalCount = document.getElementById('totalCount');
             container.innerHTML = '';
+            
+            totalCount.textContent = `共偵測到 ${detections.length} 個車牌`;
             
             detections.forEach(detection => {
                 const div = document.createElement('div');
@@ -201,10 +230,15 @@
                 img.src = 'data:image/jpeg;base64,' + detection.image;
                 img.className = 'crop-image';
                 
+                const plateNumber = document.createElement('div');
+                plateNumber.className = 'plate-number';
+                plateNumber.textContent = detection.plate_number || '無法辨識';
+                
                 const label = document.createElement('p');
                 label.textContent = `車牌 #${detection.id + 1}`;
                 
                 div.appendChild(img);
+                div.appendChild(plateNumber);
                 div.appendChild(label);
                 container.appendChild(div);
             });
