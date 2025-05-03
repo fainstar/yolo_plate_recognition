@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+FROM python:3.10-slim
 
 # 設定環境變數
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -9,8 +9,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # 安裝系統依賴
 RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
     libgl1-mesa-glx \
     libglib2.0-0 \
     curl \
@@ -30,7 +28,13 @@ COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt \
     && rm -rf ~/.cache/pip
 
-# 複製專案文件
+# 創建模型目錄
+RUN mkdir -p /app/models
+
+# 複製模型文件（確保模型文件被複製）
+COPY models/best.pt /app/models/
+
+# 複製其他專案文件
 COPY . .
 
 # 創建必要的目錄並設定權限

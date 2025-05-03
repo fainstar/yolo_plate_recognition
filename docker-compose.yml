@@ -12,18 +12,12 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PORT=5000
-      - ROBOFLOW_API_KEY=AXiN0wVj2W4ZXEFJDG13
       - TZ=Asia/Taipei
     deploy:
       resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
         limits:
-          cpus: '4'
-          memory: 8G
+          cpus: '2'
+          memory: 4G
     logging:
       driver: "json-file"
       options:

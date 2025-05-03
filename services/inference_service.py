@@ -6,6 +6,7 @@ from utils.image_processor import ImageProcessor
 import cv2
 import numpy as np
 import base64
+from ultralytics.engine.results import Results
 
 class InferenceService:
     """推論服務類"""
@@ -24,10 +25,16 @@ class InferenceService:
         try:
             # 執行推論
             model = self.model_manager.get_model()
-            results = model.infer(image)[0]
+            results = model.predict(image, verbose=False)[0]
+            
+            # 轉換結果格式
+            detections = sv.Detections(
+                xyxy=results.boxes.xyxy.cpu().numpy(),
+                confidence=results.boxes.conf.cpu().numpy(),
+                class_id=results.boxes.cls.cpu().numpy().astype(int)
+            )
             
             # 處理結果
-            detections = sv.Detections.from_inference(results)
             annotated_image = self.image_processor.draw_detections(image, detections)
             
             # 編碼結果
@@ -53,16 +60,20 @@ class InferenceService:
         try:
             # 執行推論
             model = self.model_manager.get_model()
-            results = model.infer(image)[0]
+            results = model.predict(image, verbose=False)[0]
             
-            # 使用 supervision 處理檢測結果
-            detections = sv.Detections.from_inference(results)
+            # 轉換結果格式
+            detections = sv.Detections(
+                xyxy=results.boxes.xyxy.cpu().numpy(),
+                confidence=results.boxes.conf.cpu().numpy(),
+                class_id=results.boxes.cls.cpu().numpy().astype(int)
+            )
             
             # 處理每個檢測到的區域
             processed_detections = []
             for i in range(len(detections)):
                 # 獲取邊界框座標
-                xyxy = detections.xyxy[i]  # 直接從 detections 物件獲取座標
+                xyxy = detections.xyxy[i]
                 x1, y1, x2, y2 = map(int, xyxy)
                 
                 # 裁切車牌區域
@@ -177,6 +188,6 @@ class InferenceService:
     def _encode_image(self, image):
         """將圖片編碼為 base64 字串"""
         success, encoded_image = cv2.imencode('.jpg', image)
-        if success:
+        if (success):
             return base64.b64encode(encoded_image.tobytes()).decode('utf-8')
         return None

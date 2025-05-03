@@ -1,6 +1,5 @@
 """模型管理模組"""
-import onnxruntime as ort
-from inference import get_model
+from ultralytics import YOLO
 from typing import Optional
 from config.config import config
 
@@ -10,24 +9,15 @@ class ModelManager:
     
     def __init__(self):
         self.model = None
-        self.provider = self._get_provider()
-        
-    @staticmethod
-    def _get_provider() -> str:
-        """獲取可用的推論提供者"""
-        available_providers = ort.get_available_providers()
-        print(f"可用的推論提供者: {available_providers}")
-        provider = next((p for p in config.PREFERRED_PROVIDERS 
-                        if p in available_providers), "CPUExecutionProvider")
-        print(f"使用推論提供者: {provider}")
-        return provider
         
     def get_model(self):
         """獲取模型實例"""
         if self.model is None:
-            self.model = get_model(model_id=config.MODEL_ID)
-            if hasattr(self.model, "set_providers"):
-                self.model.set_providers([self.provider])
+            try:
+                self.model = YOLO(config.MODEL_PATH)
+            except Exception as e:
+                print(f"模型載入失敗: {str(e)}")
+                raise
         return self.model
     
     @classmethod
