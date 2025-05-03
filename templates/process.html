@@ -125,6 +125,12 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
     <script>
+        // 監聽頁面刷新和關閉事件
+        window.addEventListener('beforeunload', function() {
+            // 當用戶離開處理流程頁面時，清除暫存
+            sessionStorage.removeItem('processData');
+        });
+
         const processData = JSON.parse(sessionStorage.getItem('processData'));
         const processFlow = document.getElementById('processFlow');
         const noData = document.getElementById('noData');

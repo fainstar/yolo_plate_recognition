@@ -96,11 +96,22 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
     <script>
+        const API_BASE_URL = window.location.origin;  // 自動使用當前網站的域名
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const loading = document.getElementById('loading');
         const originalImage = document.getElementById('originalImage');
         const resultImage = document.getElementById('resultImage');
+        const cropsContainer = document.getElementById('cropsContainer');
+
+        // 新增清理函數
+        function clearPreviousResults() {
+            originalImage.src = '';
+            resultImage.src = '';
+            cropsContainer.innerHTML = '';
+            document.getElementById('totalCount').textContent = '';
+            sessionStorage.removeItem('processData');
+        }
 
         // 點擊上傳區域時觸發文件選擇
         dropZone.onclick = () => fileInput.click();
@@ -130,6 +141,7 @@
 
         // 處理文件
         function processFile(file) {
+            clearPreviousResults();  // 清理之前的結果
             const reader = new FileReader();
             reader.onload = (e) => {
                 originalImage.src = e.target.result;
@@ -144,7 +156,7 @@
         async function sendToAPI(base64Image) {
             loading.style.display = 'block';
             try {
-                const response = await fetch('http://localhost:5000/infer', {
+                const response = await fetch(`${API_BASE_URL}/infer`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -171,7 +183,7 @@
         async function sendToCropsAPI(base64Image) {
             loading.style.display = 'block';
             try {
-                const response = await fetch('http://localhost:5000/infer/crops', {
+                const response = await fetch(`${API_BASE_URL}/infer/crops`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
