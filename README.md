@@ -1,12 +1,16 @@
 # 車牌辨識系統
 
 ## 專案簡介
-本專案是一個基於 YOLOv8 模型的車牌辨識系統，提供 Web 介面和 API 服務。系統整合了車牌偵測和 PaddleOCR 文字辨識功能，支援 GPU 加速並自動回退到 CPU 運算。系統使用 base64 進行圖片傳輸，確保資料傳輸的安全性和效率。
+本專案是一個基於 YOLOv8 模型的車牌辨識系統，提供 Web 介面和 API 服務。系統整合了車牌偵測和 PaddleOCR 文字辨識功能，使用純 CPU 運算以確保最大的相容性。系統使用 base64 進行圖片傳輸，確保資料傳輸的安全性和效率。
+
+## 線上服務
+- **Demo 網站：** [https://plat.iside.space/](https://plat.iside.space/)
+- **API 端點：** `https://plat.iside.space/infer`
 
 ## 系統需求
 - Python 3.10 或以上
-- CUDA 11.6（用於 GPU 加速，可選）
-- NVIDIA 顯示卡驅動程式（用於 GPU 加速，可選）
+- Docker（用於容器化部署）
+- 4GB 以上記憶體
 
 ## 工作目錄結構
 ```
@@ -17,6 +21,7 @@
 │   └── config.py          # 系統配置檔案
 ├── models/                 # 模型管理
 │   ├── __init__.py
+│   ├── best.pt            # YOLOv8 訓練模型
 │   └── model_manager.py   # 模型管理器
 ├── services/              # 服務層
 │   ├── __init__.py
@@ -25,7 +30,8 @@
 │   ├── __init__.py
 │   └── image_processor.py # 圖片處理工具
 ├── templates/             # 網頁模板
-│   └── index.html        # Web 介面
+│   ├── index.html        # 主頁面
+│   └── process.html      # 處理流程頁面
 ├── Test/                 # 測試目錄
 │   ├── test_api.py       # API 測試
 │   ├── test_base.py      # 基礎功能測試
@@ -49,7 +55,7 @@
 2. **高效能辨識引擎**
    - YOLOv8 車牌檢測
    - PaddleOCR 文字識別
-   - GPU 加速支援
+   - 優化的 CPU 運算
    - 批次處理能力
 
 3. **友善使用介面**
@@ -57,6 +63,23 @@
    - 即時視覺化結果
    - 拖放式圖片上傳
    - 詳細辨識資訊顯示
+
+## Docker 部署
+
+### 使用 Docker Hub（推薦）
+```bash
+# 直接從 Docker Hub 拉取映像檔
+docker pull oomaybeoo/plate-recognition
+
+# 執行容器
+docker run -d \
+  --name plate-recognition \
+  -p 5000:5000 \
+  -v ./Data:/app/Data:ro \
+  -v ./OutPut:/app/OutPut \
+  oomaybeoo/plate-recognition
+```
+
 
 ## API 服務說明
 
@@ -89,8 +112,13 @@
     "detections": [
         {
             "id": 0,
-            "image": "base64_encoded_crop",
-            "plate_number": "ABC-1234"
+            "bbox": [x1, y1, x2, y2],
+            "plate_number": "ABC-1234",
+            "processing_images": {
+                "plate": "base64_encoded_crop",
+                "gray": "base64_encoded_gray",
+                "binary": "base64_encoded_binary"
+            }
         }
     ]
 }
@@ -111,26 +139,11 @@
 }
 ```
 
-## 安裝配置
-
-### 1. 環境準備
-```bash
-# 建立虛擬環境
-python -m venv .venv
-
-# 啟動虛擬環境
-.venv\Scripts\activate
-
-# 安裝依賴套件
-pip install -r requirements.txt
-```
-
-### 2. 系統配置
+## 系統配置
 在 `config.py` 中可調整的關鍵參數：
 
 ```python
 # PaddleOCR 配置
-PADDLE_USE_GPU = True          # 是否使用 GPU
 PADDLE_LANG = "en"             # 識別語言
 PADDLE_MIN_SCORE = 0.3         # 檢測閾值
 PADDLE_BOX_THRESH = 0.3        # 框選閾值
@@ -138,8 +151,8 @@ PADDLE_BOX_THRESH = 0.3        # 框選閾值
 # 圖像處理配置
 IMAGE_RESIZE_FACTOR = 3.0      # 放大倍數
 CONTRAST_ALPHA = 1.5           # 對比度調整
-CONTRAST_BETA = 10             # 亮度調整
-DENOISE_H = 10                 # 去噪強度
+CONTRAST_BETA = 8              # 亮度調整
+DENOISE_H = 8                  # 去噪強度
 ```
 
 ## 性能優化建議
@@ -149,10 +162,10 @@ DENOISE_H = 10                 # 去噪強度
 - 降低 `DENOISE_H` 以保留更多細節
 - 適當調整 `CONTRAST_ALPHA` 和 `CONTRAST_BETA`
 
-### 2. GPU 加速優化
-- 確保 CUDA 版本相容
-- 預先載入模型到 GPU 記憶體
-- 批次處理時善用 GPU 並行運算
+### 2. CPU 效能優化
+- 調整容器 CPU 核心數限制
+- 優化圖片預處理參數
+- 批次處理時注意記憶體使用
 
 ### 3. API 效能優化
 - 使用異步處理大量請求
@@ -168,22 +181,23 @@ DENOISE_H = 10                 # 去噪強度
    - 確認 base64 編碼是否完整
    - 檢查圖片檔案權限
 
-2. **GPU 相關問題**
-   - 確認 CUDA 驅動程式版本
-   - 檢查 GPU 記憶體使用狀況
-   - 確認 CUDA_VISIBLE_DEVICES 設置
+2. **系統效能問題**
+   - 檢查 CPU 使用率
+   - 監控記憶體使用狀況
+   - 調整容器資源限制
 
 3. **辨識準確度問題**
    - 調整預處理參數
    - 檢查圖片品質
    - 優化 OCR 配置
 
-## 開發團隊
-若有任何問題或建議，請聯絡：
-- Email：[您的信箱]
-- GitHub：[您的 GitHub]
-
 ## 版本歷程
+
+### 2025/05/04
+- 移除 GPU 相關依賴
+- 優化 CPU 運算效能
+- 更新 Docker 配置
+- 簡化部署流程
 
 ### 2025/05/01
 - 更新 PaddleOCR 配置
