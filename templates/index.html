@@ -97,6 +97,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
     <script>
         const API_BASE_URL = window.location.origin;  // 自動使用當前網站的域名
+        const MAX_RETRIES = 3; // 最大重試次數
+        const RETRY_DELAY = 1000; // 重試間隔時間 (毫秒)
+
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         const loading = document.getElementById('loading');
@@ -140,76 +143,118 @@
         };
 
         // 處理文件
-        function processFile(file) {
+        async function processFile(file) { // 設為 async
             clearPreviousResults();  // 清理之前的結果
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => { // 內嵌函數也設為 async
                 originalImage.src = e.target.result;
                 const base64Image = e.target.result.split(',')[1];
-                sendToAPI(base64Image);
-                sendToCropsAPI(base64Image);
+                
+                loading.style.display = 'block'; // 顯示 loading
+                try {
+                    const apiSuccess = await sendToAPI(base64Image);
+                    if (apiSuccess) {
+                        await sendToCropsAPI(base64Image); // 如果 sendToAPI 成功，才執行 sendToCropsAPI
+                    }
+                } catch (error) {
+                    console.error("在 processFile 序列中發生錯誤:", error);
+                    alert('處理檔案過程中發生未預期錯誤。');
+                } finally {
+                    loading.style.display = 'none'; // 隱藏 loading
+                }
             };
             reader.readAsDataURL(file);
         }
 
         // 發送到 API
         async function sendToAPI(base64Image) {
-            loading.style.display = 'block';
-            try {
-                const response = await fetch(`${API_BASE_URL}/infer`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        image: base64Image
-                    })
-                });
+            // loading.style.display = 'block'; // 由 processFile 控制
+            let retries = 0;
+            while (retries < MAX_RETRIES) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/infer`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image: base64Image
+                        })
+                    });
 
-                const data = await response.json();
-                if (data.success) {
-                    resultImage.src = 'data:image/jpeg;base64,' + data.image;
-                } else {
-                    alert('處理失敗：' + data.error);
+                    if (!response.ok) {
+                        throw new Error(`API請求失敗，狀態碼：${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.success) {
+                        resultImage.src = 'data:image/jpeg;base64,' + data.image;
+                        // loading.style.display = 'none'; // 由 processFile 控制
+                        return true; // 成功時回傳 true
+                    } else {
+                        throw new Error('API處理失敗：' + data.error);
+                    }
+                } catch (error) {
+                    retries++;
+                    console.error(`sendToAPI 第 ${retries} 次重試失敗:`, error.message);
+                    if (retries >= MAX_RETRIES) {
+                        alert('發生錯誤（sendToAPI）：' + error.message + '\n已達最大重試次數。');
+                        // loading.style.display = 'none'; // 由 processFile 控制
+                        return false; // 失敗時回傳 false
+                    }
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                 }
-            } catch (error) {
-                alert('發生錯誤：' + error.message);
-            } finally {
-                loading.style.display = 'none';
             }
+            // loading.style.display = 'none'; // 由 processFile 控制
+            return false; // 若重試次數用盡仍失敗
         }
 
         // 發送到裁剪 API
         async function sendToCropsAPI(base64Image) {
-            loading.style.display = 'block';
-            try {
-                const response = await fetch(`${API_BASE_URL}/infer/crops`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        image: base64Image
-                    })
-                });
+            // loading.style.display = 'block'; // 由 processFile 控制
+            let retries = 0;
+            while (retries < MAX_RETRIES) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/infer/crops`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            image: base64Image
+                        })
+                    });
 
-                const data = await response.json();
-                if (data.success) {
-                    displayCrops(data.detections);
-                    // 儲存處理結果到 sessionStorage
-                    sessionStorage.setItem('processData', JSON.stringify({
-                        original: originalImage.src,
-                        result: resultImage.src,
-                        detections: data.detections
-                    }));
-                } else {
-                    alert('處理失敗：' + data.error);
+                    if (!response.ok) {
+                        throw new Error(`Crops API請求失敗，狀態碼：${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    if (data.success) {
+                        displayCrops(data.detections);
+                        sessionStorage.setItem('processData', JSON.stringify({
+                            original: originalImage.src,
+                            result: resultImage.src,
+                            detections: data.detections
+                        }));
+                        // loading.style.display = 'none'; // 由 processFile 控制
+                        return true; // 成功時回傳 true
+                    } else {
+                        throw new Error('Crops API處理失敗：' + data.error);
+                    }
+                } catch (error) {
+                    retries++;
+                    console.error(`sendToCropsAPI 第 ${retries} 次重試失敗:`, error.message);
+                    if (retries >= MAX_RETRIES) {
+                        alert('發生錯誤（sendToCropsAPI）：' + error.message + '\n已達最大重試次數。');
+                        // loading.style.display = 'none'; // 由 processFile 控制
+                        return false; // 失敗時回傳 false
+                    }
+                    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                 }
-            } catch (error) {
-                alert('發生錯誤：' + error.message);
-            } finally {
-                loading.style.display = 'none';
             }
+            // loading.style.display = 'none'; // 由 processFile 控制
+            return false; // 若重試次數用盡仍失敗
         }
 
         // 更新顯示裁剪的車牌圖片和辨識結果

@@ -10,12 +10,16 @@
 ## 系統需求
 - Python 3.10 或以上
 - Docker（用於容器化部署）
-- 4GB 以上記憶體
+- 建議 2GB 以上記憶體 (經優化後，需求降低)
 
 ## 工作目錄結構
 ```
 .
+├── Dockerfile              # Docker 配置文件
+├── docker-compose.yml      # Docker Compose 配置文件 (可選)
 ├── main.py                 # 主程式入口
+├── README.md               # 專案說明文件
+├── requirements.txt        # Python 依賴列表
 ├── config/                 # 配置管理
 │   ├── __init__.py
 │   └── config.py          # 系統配置檔案
@@ -32,15 +36,14 @@
 ├── templates/             # 網頁模板
 │   ├── index.html        # 主頁面
 │   └── process.html      # 處理流程頁面
-├── Test/                 # 測試目錄
-│   ├── test_api.py       # API 測試
-│   ├── test_base.py      # 基礎功能測試
-│   └── test_plate_recognition.py # 車牌辨識測試
+├── Test/                 # 測試目錄 (部分測試檔案可能未列出)
+│   ├── test_base.py
+│   └── test_plate_recognition.py
 ├── Data/                 # 測試資料
 │   ├── base_01.png
 │   ├── data02.jpg
 │   └── data03.jpeg
-└── OutPut/              # 輸出結果
+└── OutPut/              # 輸出結果 (本地測試時)
     ├── result.jpg
     └── plates/          # 裁剪的車牌圖片
 ```
@@ -55,7 +58,7 @@
 2. **高效能辨識引擎**
    - YOLOv8 車牌檢測
    - PaddleOCR 文字識別
-   - 優化的 CPU 運算
+   - 優化的 CPU 運算 (透過 Docker 多階段建置進一步減小映像檔大小)
    - 批次處理能力
 
 3. **友善使用介面**
@@ -63,23 +66,44 @@
    - 即時視覺化結果
    - 拖放式圖片上傳
    - 詳細辨識資訊顯示
+   - **自動清理圖片快取**：確保每次上傳都是全新處理，並在離開處理頁面時自動清除。
+   - **API 請求重試機制**：提高網路不穩定時的處理成功率。
 
 ## Docker 部署
 
-### 使用 Docker Hub（推薦）
+### 1. 建置映像檔 (可選，推薦直接拉取)
+如果您想自行建置映像檔：
 ```bash
-# 直接從 Docker Hub 拉取映像檔
-docker pull oomaybeoo/plate-recognition
+# 進入專案根目錄
+cd /path/to/your/OpenCV_project
+# 建置 Docker 映像檔
+docker build -t oomaybeoo/plate-recognition:latest .
+```
+
+### 2. 使用 Docker Hub (推薦)
+```bash
+# 直接從 Docker Hub 拉取最新映像檔
+docker pull oomaybeoo/plate-recognition:latest
 
 # 執行容器
 docker run -d \
   --name plate-recognition \
   -p 5000:5000 \
-  -v ./Data:/app/Data:ro \
-  -v ./OutPut:/app/OutPut \
-  oomaybeoo/plate-recognition
+  # 如果您需要在容器外存取處理後的圖片，可以掛載 OutPut 目錄
+  # -v /your/local/output_path:/app/OutPut \
+  # 如果您有固定的測試圖片集，可以掛載 Data 目錄 (唯讀)
+  # -v /your/local/data_path:/app/Data:ro \
+  oomaybeoo/plate-recognition:latest
 ```
+**注意：** 由於前端現在直接處理 Base64 圖片，`OutPut` 和 `Data` 目錄的掛載主要用於本地開發或特定測試需求。對於標準的 Web 服務使用，通常不需要掛載這些目錄。
 
+### 3. 推送映像檔到 Docker Hub (如果您自行建置並想分享)
+```bash
+# 登入 Docker Hub
+docker login
+# 推送映像檔
+docker push oomaybeoo/plate-recognition:latest
+```
 
 ## API 服務說明
 
@@ -192,6 +216,19 @@ DENOISE_H = 8                  # 去噪強度
    - 優化 OCR 配置
 
 ## 版本歷程
+
+### 2025/05/08
+- **前端優化**：
+    - 新增圖片上傳前自動清理先前結果的功能。
+    - 新增處理流程頁面離開時自動清理 sessionStorage 的功能。
+    - 為 API 請求 (`/infer` 和 `/infer/crops`) 新增重試機制，提高傳輸穩定性。
+    - 調整 API 呼叫順序，確保 `/infer` 成功後才呼叫 `/infer/crops`。
+- **Docker 優化**：
+    - 大幅精簡 `requirements.txt`，移除不必要的開發和 GPU 相關套件。
+    - `Dockerfile` 改為多階段建置，顯著減小最終映像檔大小。
+    - 明確在 `Dockerfile` 中安裝 PyTorch CPU 版本。
+    - 優化 `Dockerfile` 中的 `COPY` 指令，僅複製必要檔案。
+- **文件更新**：更新 README.md 以反映最新的 Docker 指令和前端功能。
 
 ### 2025/05/04
 - 移除 GPU 相關依賴
